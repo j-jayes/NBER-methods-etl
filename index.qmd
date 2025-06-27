@@ -12,6 +12,8 @@ title-slide-attributes:
   data-background-position: "center"
   data-background-size: "contain"
   data-background-opacity: "0.2"
+execute:
+  eval: false # Disable code execution in the slides
 ---
 
 ## The "Fashion" in Economic Research {.smaller}
@@ -155,3 +157,189 @@ The app's real power is in custom search. For example, we can easily track the r
 ## Thank You
 
 **Questions?**
+
+
+# Code Explained! {background-color="#0B5394" .uncounted}
+
+## The Goal: `01_ingest_data.py`
+
+This script is the first and most critical step in our automated data pipeline.
+
+**Its primary job is to:**
+
+1.  Download the latest paper metadata from the NBER website.
+
+2.  Compare it against our local SQLite database.
+
+3.  Append **only the new papers**, ensuring our data is always up-to-date without duplication.
+
+## Configuration and Setup{.smaller}
+
+A well-structured script starts with clear configuration. We define constants for our data source and local database paths. Using `pathlib` makes path manipulation clean and OS-agnostic.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-4,7-11"
+import pandas as pd
+import sqlite3
+from pathlib import Path
+import csv
+
+# --- Configuration ---
+# Define the base URL for NBER data
+BASE_URL = "http://data.nber.org/nber_paper_chapter_metadata/tsv/"
+
+# Define project structure paths
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+DB_PATH = PROJECT_ROOT / "data" / "03_primary" / "nber_papers.db"
+TABLE_NAME = "papers"
+```
+
+## Downloading the Raw Data{.smaller}
+
+Next, we fetch the data directly from the NBER's TSV (Tab-Separated Values) files using `pandas`. 
+
+A `try...except` block makes our script resilient to network errors or changes in the source URL.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "3-14"
+def ingest_and_update_db():
+    """..."""
+    try:
+        print("Downloading core reference data (ref.tsv)...")
+        latest_df = pd.read_csv(
+            f"{BASE_URL}ref.tsv",
+            sep='\t',
+            names=['paper', 'author', 'title', 'issue_date', 'doi'],
+            header=0,
+            engine='python',
+            quoting=csv.QUOTE_NONE
+        )
+        print(f"Successfully loaded {latest_df.shape[0]} total records from ref.tsv.")
+```
+
+***Note***: The `quoting=csv.QUOTE_NONE` is important because the source TSV files have unquoted special characters that can break the default parser.
+
+## Merging with Abstracts{.smaller}
+
+The metadata and abstracts are in separate files. We download the abstracts and use `pd.merge` to join them into a single, unified DataFrame. A `left` join ensures we keep all papers, even if an abstract is missing.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-10"
+        print("Downloading abstracts (abs.tsv)...")
+        abstracts_df = pd.read_csv(
+            f"{BASE_URL}abs.tsv",
+            sep='\t',
+            names=['paper', 'abstract'],
+            header=0,
+            engine='python',
+            quoting=csv.QUOTE_NONE
+        )
+        latest_df = pd.merge(latest_df, abstracts_df, on="paper", how="left")
+        print("Successfully merged abstracts.")
+```
+
+## Robust Data Cleaning{.smaller}
+
+Real-world data is often messy. The `issue_date` column can contain invalid entries like '0000-00-00'.
+
+We handle this gracefully:
+
+1.  Use `pd.to_datetime` with `errors='coerce'` to turn any invalid date formats into `NaT` (Not a Time).
+2.  Use `.dropna()` to remove these rows, ensuring high data quality downstream.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "5-9"
+    # --- MORE ROBUST Data Cleaning Step ---
+    print("Cleaning 'issue_date' column...")
+
+    # Convert to datetime, coercing errors will turn invalid dates like '0000-00-00' into NaT
+    latest_df['issue_date'] = pd.to_datetime(latest_df['issue_date'], errors='coerce')
+    
+    # Drop rows where the date conversion resulted in NaT (Not a Time) using reassignment
+    latest_df = latest_df.dropna(subset=['issue_date'])
+    
+```
+
+## Checking the Existing Database{.smaller}
+
+Before we add new data, we need to know what we already have. We connect to the SQLite database and read all existing paper IDs into a Python `set` for highly efficient lookups.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "2-13"
+    # 3. Connect to SQLite DB and get existing paper IDs
+    existing_ids = set()
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        if pd.io.sql.table_exists(TABLE_NAME, conn):
+            print(f"Database found at {DB_PATH}. Fetching existing paper IDs...")
+            existing_ids_df = pd.read_sql(f"SELECT paper FROM {TABLE_NAME}", conn)
+            existing_ids = set(existing_ids_df['paper'])
+            print(f"Found {len(existing_ids)} existing papers in the database.")
+        else:
+            print("No existing database found. A new one will be created.")
+        conn.close()
+    except Exception as e:
+        # ...
+```
+
+## The Core Logic: Identifying New Papers{.smaller}
+
+This is the key step for preventing duplicates. We use the power of pandas boolean indexing and the `isin()` method. This one line of code efficiently filters our downloaded DataFrame, keeping only the rows whose 'paper' ID is **not** in our `existing_ids` set.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1"
+    new_papers_df = latest_df[~latest_df['paper'].isin(existing_ids)]
+```
+
+## Appending New Data to the Database{.smaller}
+
+If any new papers were found, we connect to the database again and append them. Using `to_sql` with `if_exists='append'` is crucial. It tells pandas to add the new rows to the existing table instead of creating a new one or erroring out.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "2-12"
+    if not new_papers_df.empty:
+        print(f"Found {len(new_papers_df)} new papers to add.")
+        try:
+            conn = sqlite3.connect(DB_PATH)
+            new_papers_df.to_sql(
+                TABLE_NAME,
+                conn,
+                if_exists='append',
+                index=False
+            )
+            conn.close()
+            print("Successfully appended new papers to the database.")
+```
+
+
+## Executing the Script{.smaller}
+
+Finally, the `if __name__ == '__main__':` block ensures the `ingest_and_update_db` function runs only when the script is executed directly. This is standard Python practice that allows functions from this script to be safely imported into other files without side effects.
+
+```{python}
+#| eval: false
+#| echo: true
+#| code-line-numbers: "1-6"
+if __name__ == '__main__':
+    newly_added_papers = ingest_and_update_db()
+    if not newly_added_papers.empty:
+        print("\n--- Summary of Newly Added Papers ---")
+        print(newly_added_papers[['paper', 'title', 'issue_date']].head())
+    print("\n--- Pipeline execution finished. ---")
+```
+
+This completes the automated, incremental update of our NBER database!
