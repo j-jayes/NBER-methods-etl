@@ -41,6 +41,47 @@ This ensures that the deployed Streamlit app (`app/app.py`)always has access to 
 
 ---
 
+## 📂 Repository Structure
+
+```
+NBER-METHODS-ETL/
+│
+├── .github/
+│   └── workflows/
+│       └── update_data.yml      # Automated weekly data update workflow
+│
+├── app/
+│   └── app.py                   # The main Streamlit application script
+│
+├── assets/
+│   └── methods.png              # Image used in the README
+│
+├── data/
+│   └── 03_primary/
+│       ├── nber_papers.db       # SQLite DB with all paper metadata
+│       └── nber_full_text.parquet # Cleaned data ready for the app
+│
+├── notebooks/
+│   └── .gitkeep                 # Folder for exploratory data analysis
+│
+├── pipeline/
+│   ├── 01_ingest_data.py        # Script to download data and update the DB
+│   └── 02_process_text.py       # Script to create the final Parquet file
+│
+├── tests/
+│   └── test_data_quality.py     # Script to validate the data in the DB
+│
+├── .gitignore                   # Specifies files for Git to ignore
+├── LICENSE                      # Project license file
+├── Makefile                     # Shortcuts for common commands (e.g., make data)
+├── pyproject.toml               # Project metadata (can be used by poetry/hatch)
+├── README.md                    # This file
+├── requirements.txt             # Dependencies for the Streamlit app
+└── requirements-pipeline.txt    # Dependencies for the data pipeline
+```
+
+---
+
 ## Running the Project Locally
 
 To run this project on your local machine, follow these steps:
