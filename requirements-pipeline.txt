@@ -1,0 +1,3 @@
+# Dependencies required ONLY for the data pipeline
+pandas
+pyarrow
