@@ -1,0 +1,58 @@
+# This is a GitHub Actions workflow that automatically updates the NBER data.
+# It runs on a schedule and commits the updated data files back to the repository.
+
+name: Update NBER Data
+
+on:
+  # Allows you to run this workflow manually from the Actions tab on GitHub
+  workflow_dispatch:
+
+  # Runs the job on a schedule. This is set to run every Sunday at 3:15 AM UTC.
+  # You can adjust the cron schedule as needed. Use crontab.guru to help.
+  schedule:
+    - cron: '15 3 * * 0'
+
+jobs:
+  update-data:
+    runs-on: ubuntu-latest # Use the latest version of Ubuntu as the runner
+
+    steps:
+      # Step 1: Check out the repository's code so the runner can access it
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # Step 2: Set up the Python environment
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11' # Specify a Python version
+
+      # Step 3: Install the project's dependencies from requirements.txt
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # Step 4: Run the data ingestion and processing pipeline
+      - name: Run data pipeline
+        run: |
+          python pipeline/01_ingest_data.py
+          python pipeline/02_process_text.py
+
+      # Step 5: Configure Git and commit the updated files if they have changed
+      - name: Commit and push if data has changed
+        run: |
+          # Configure git with a user name and email
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          
+          # Add the potentially updated files to the staging area
+          git add data/03_primary/nber_papers.db
+          git add data/03_primary/nber_full_text.parquet
+          
+          # Check for changes. If there are no changes, `git diff` will exit with 0.
+          # If there are changes, it will exit with a non-zero status.
+          # The `|| exit 0` part ensures the workflow doesn't fail if there are no changes.
+          git diff --staged --quiet || (git commit -m "Automated data update" && git push)
+          
+          echo "Data update process finished. Files committed and pushed if changes were detected."
