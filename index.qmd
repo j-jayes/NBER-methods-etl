@@ -8,40 +8,33 @@ format:
 author: "Jonathan Jayes"
 date: today
 title-slide-attributes:
-  data-background-image: "assets/app_screenshot.png" # A screenshot of your final app
-  data-background-position: "center"
-  data-background-size: "contain"
-  data-background-opacity: "0.2"
+  data-background-image: "assets/preview.png"
+  data-background-position: "bottom 10"
+  data-background-size: "40%"
+  data-background-opacity: "0.4"
 execute:
   eval: false # Disable code execution in the slides
 ---
 
 ## The "Fashion" in Economic Research {.smaller}
 
-The world of academic research, much like fashion, has distinct trends. Methodologies and topics rise and fall in popularity over time. The National Bureau of Economic Research (NBER) provides a firehose of data on these trends through its working papers.
+The world of academic research, much like fashion, has distinct trends. Methodologies and topics rise and fall in popularity over time. 
 
-This project was inspired by a chart in *The Economist* that visualized this very phenomenon.
+<!-- The National Bureau of Economic Research (NBER) provides a firehose of data on these trends through its working papers. -->
 
-:::: {.columns}
+This project was inspired by a chart in *The Economist* that visualized this very phenomenon in 2016.
 
-::: {.column width="60%"}
-![](assets/economist_chart.png)
-*Image: The Economist*
-:::
+![](assets/methods.png)
 
-::: {.column width="40%"}
-**The Motivation:**
+## Goal {background-color="#0B5394" .uncounted}
 
--   Can we replicate this analysis?
--   Can we build a tool to explore *any* term, not just pre-selected ones?
--   Can we automate the process so the data is always current?
-:::
+-   Can I replicate this analysis?
+-   Can I build a tool to explore *any* term, not just pre-selected ones?
+-   Can I automate the process so the data is always current?
 
-::::
+<!-- Goal: 
 
-## The Goal {background-color="#0B5394" .uncounted}
-
-To build a fully automated, interactive web application that allows anyone to track and explore the evolution of research trends in NBER working papers.
+To build a fully automated, interactive web application that allows anyone to track and explore the evolution of research trends in NBER working papers. -->
 
 ## Step 1: The Automated Data Pipeline {.smaller}
 
@@ -51,14 +44,20 @@ The foundation of the project is an automated pipeline that runs weekly using Gi
 
 ::: {.column width="60%"}
 **Part 1: Ingestion & Cleaning**
+
 1.  A scheduled job downloads the latest metadata from the NBER website.
+
 2.  It checks against a local SQLite database and appends only *new* papers.
+
 3.  It cleans the data, ensuring dates are valid and text fields are standardized.
 
 **Part 2: Processing & Preparation**
+
 1.  A second script reads the clean data from the SQLite database.
+
 2.  It combines titles and abstracts into a single, searchable text field.
-3.  The final, enriched dataset is saved as a highly efficient Parquet file, ready for the app.
+
+3.  The final, enriched dataset is saved as a Parquet file, ready for the app.
 :::
 
 ::: {.column width="40%"}
@@ -66,15 +65,15 @@ The foundation of the project is an automated pipeline that runs weekly using Gi
 
 NBER-METHODS-ETL/
 ├── .github/
-│   └── update\_data.yml
+│   └── update_data.yml
 ├── app/
 │   └── app.py
 ├── data/
-│   ├── nber\_papers.db
-│   └── nber\_full\_text.parquet
+│   ├── nber_papers.db
+│   └── nber_full_text.parquet
 ├── pipeline/
-│   ├── 01\_ingest\_data.py
-│   └── 02\_process\_text.py
+│   ├── 01_ingest_data.py
+│   └── 02_process_text.py
 ├── requirements.txt
 └── README.md
 
@@ -85,79 +84,59 @@ NBER-METHODS-ETL/
 
 ## Step 2: Exploring the Data (EDA) {.smaller}
 
-Before building the app, we explored the data to find interesting patterns.
+Before building the app, I explored the data to find interesting patterns.
 
-:::: {.columns}
-
-::: {.column width="50%"}
 **Top Terms (TF-IDF)**
 
-We used TF-IDF to find the most characteristic terms for each year. This reveals the "buzzwords" of the time.
+I used TF-IDF to find the most characteristic terms for each year. This reveals the "buzzwords" of the time.
 
 | Year | Top 5 Characteristic Terms                                  |
 |:----:|:------------------------------------------------------------|
 | 2020 | `covid`, `pandemic`, `lockdown`, `social distancing`, `stimulus` |
 | 2010 | `financial crisis`, `stimulus`, `mortgage`, `banks`, `foreclosure` |
-| 2000 | `technology`, `internet`, `productivity growth`, `stock returns`, `90s` |
+| 2000 | `technology`, `internet`, `productivity`, `stock returns`, `90s` |
 | 1990 | `soviet union`, `trade liberalization`, `wage inequality`, `fdi`, `nafta` |
 
-:::
 
-::: {.column width="50%"}
-**Topic Modeling (BERTopic)**
-
-We used BERTopic to discover latent themes in the research.
-
-![](assets/bertopic_plot.png)
-:::
-
-::::
 
 ## Step 3: The Interactive App {.smaller}
 
 The final result is a Streamlit web application that brings all this data to life.
 
-![](assets/app_screenshot.png)
-
-## Uncovering New Trends
-
-The app's real power is in custom search. For example, we can easily track the rise of research into "climate change" and "causal inference" – topics not on the original *Economist* chart.
-
-![](assets/custom_search_screenshot.png)
+![](assets/app.png)
 
 # Try It Yourself! {background-color="#0B5394" .uncounted}
 
-## [nber-methods-etl.streamlit.app](https://nber-methods-etl.streamlit.app/)
+[nber-methods-etl.streamlit.app](https://nber-methods-etl.streamlit.app)
 
-## Conclusion & Future Work
+## Conclusion & Future Work{.smaller}
 
 :::: {.columns}
 
-::: {.column width="60%"}
+::: {.column width="40%"}
 **Conclusion**
+
 -   It is possible to build a fully automated, publicly available tool for exploring research trends.
--   Modern text analysis techniques like TF-IDF and BERTopic can quickly surface key themes from a large corpus of documents.
+
 -   The interactive nature of Streamlit allows for much deeper and more personalized exploration than a static chart.
 
 :::
 
-::: {.column width="40%"}
+::: {.column width="60%"}
 **Future Work**
+
 -   **Performance:** Implement a pre-computed inverted index for near-instant search results.
+
 -   **New Features:**
     -   Author-level analysis.
     -   Shareable URLs to save and send specific views.
+
 -   **Advanced Analysis:**
     -   Use word embeddings for semantic search.
 
 :::
 
 ::::
-
-## Thank You
-
-**Questions?**
-
 
 # Code Explained! {background-color="#0B5394" .uncounted}
 
@@ -180,7 +159,6 @@ A well-structured script starts with clear configuration. We define constants fo
 ```{python}
 #| eval: false
 #| echo: true
-#| code-line-numbers: "1-4,7-11"
 import pandas as pd
 import sqlite3
 from pathlib import Path
@@ -244,7 +222,7 @@ The metadata and abstracts are in separate files. We download the abstracts and 
         print("Successfully merged abstracts.")
 ```
 
-## Robust Data Cleaning{.smaller}
+## Data Cleaning{.smaller}
 
 Real-world data is often messy. The `issue_date` column can contain invalid entries like '0000-00-00'.
 
@@ -257,7 +235,7 @@ We handle this gracefully:
 #| eval: false
 #| echo: true
 #| code-line-numbers: "5-9"
-    # --- MORE ROBUST Data Cleaning Step ---
+    # --- MORE Data Cleaning ---
     print("Cleaning 'issue_date' column...")
 
     # Convert to datetime, coercing errors will turn invalid dates like '0000-00-00' into NaT
@@ -292,7 +270,7 @@ Before we add new data, we need to know what we already have. We connect to the 
         # ...
 ```
 
-## The Core Logic: Identifying New Papers{.smaller}
+## Identifying New Papers{.smaller}
 
 This is the key step for preventing duplicates. We use the power of pandas boolean indexing and the `isin()` method. This one line of code efficiently filters our downloaded DataFrame, keeping only the rows whose 'paper' ID is **not** in our `existing_ids` set.
 
@@ -343,3 +321,7 @@ if __name__ == '__main__':
 ```
 
 This completes the automated, incremental update of our NBER database!
+
+## Github Actions Workflow
+
+![](assets/pipeline.png)
