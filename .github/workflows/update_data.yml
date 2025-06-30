@@ -31,7 +31,7 @@ jobs:
       - name: Install dependencies
         run: |
           pip install uv
-          uv pip sync requirements-pipeline.txt
+          uv pip sync --system requirements-pipeline.txt # <-- FIX IS HERE
 
       # Step 4: Run the data ingestion and processing pipeline
       - name: Run data pipeline
